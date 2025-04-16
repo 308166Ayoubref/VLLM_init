@@ -1,0 +1,45 @@
+version: "3.8"
+services:
+  vllm:
+    image: vllm/vllm-openai:latest
+    runtime: nvidia
+    volumes:
+      - /home/ubuntu/models/Llama-3.1-70b-instruct-awq-int4:/model
+    ports:
+      - "8000:8000"
+    command: >
+      --model /model
+      --quantization awq_marlin
+      
+      --dtype float16
+      --max-model-len 4096
+      --gpu-memory-utilization 0.95
+      --config-format hf  
+      --max-num-seqs 16
+      --max-num-batched-tokens 8192
+      --num-lookahead-slots 4
+      --enforce-eager
+
+
+    
+
+
+
+
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+
+  fastapi:
+    build: .
+    depends_on:
+      - vllm
+    ports:
+      - "8080:8080"
+    environment:
+      - VLLM_API_URL=http://vllm:8000/v1/completions
+
