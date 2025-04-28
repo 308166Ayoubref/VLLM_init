@@ -4,25 +4,24 @@ services:
     image: vllm/vllm-openai:latest
     runtime: nvidia
     volumes:
-      - /home/ubuntu/models/Llama-3.1-70b-instruct-awq-int4:/model
+      - /mnt/hugging-face-models/mistral/mistral-small-awq-24b:/model
+      #- /mnt/hugging-face-models/deepseek/R1-14b-awq:/model
     ports:
       - "8000:8000"
     command: >
       --model /model
-      --quantization awq_marlin
+      --served-model-name deepseek
+      --quantization awq
       
       --dtype float16
-      --max-model-len 4096
-      --gpu-memory-utilization 0.95
+      --max-model-len 129700
+      --gpu-memory-utilization 0.97
       --config-format hf  
-      --max-num-seqs 16
+      --max-num-seqs 2
       --max-num-batched-tokens 8192
       --num-lookahead-slots 4
       --enforce-eager
-
-
-    
-
+          
 
 
 
@@ -33,13 +32,14 @@ services:
           devices:
             - capabilities: [gpu]
 
-
-  fastapi:
-    build: .
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.rag
+    ports:
+      - "8501:8501"
     depends_on:
       - vllm
-    ports:
-      - "8080:8080"
     environment:
-      - VLLM_API_URL=http://vllm:8000/v1/completions
-
+      - MODEL_SERVER_URL=http://vllm:8000/v1
+    command: streamlit run affichage5.py --server.address=0.0.0.0 --server.port=8501
