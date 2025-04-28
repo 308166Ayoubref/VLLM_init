@@ -11,12 +11,12 @@ app = FastAPI()
 class PromptRequest(BaseModel):
     prompt: str
     max_tokens: int = 100
-    temperature: float = 0.7
+    temperature: float = 0.1
 
 @app.post("/generate/")
 def generate_text(request: PromptRequest):
     payload = {
-        "model": "/model",
+        "model": "deepseek",
         "prompt": request.prompt,
         "max_tokens": request.max_tokens,
         "temperature": request.temperature

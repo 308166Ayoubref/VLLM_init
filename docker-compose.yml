@@ -1,31 +1,29 @@
 version: "3.8"
+
 services:
   vllm:
     image: vllm/vllm-openai:latest
     runtime: nvidia
     volumes:
-      - /home/ubuntu/models/Llama-3.1-70b-instruct-awq-int4:/model
+      - /mnt/hugging-face-models/mistral/mistral-small-instruct-24b:/model
     ports:
       - "8000:8000"
     command: >
       --model /model
-      --quantization awq_marlin
-      
+      --served-model-name mistral-small
+      --tokenizer-mode mistral
+      --config-format mistral
+      --load-format mistral
+      --tool-call-parser mistral
+      --enable-auto-tool-choice
+      --limit-mm-per-prompt 'image=10'
+      --tensor-parallel-size 4
       --dtype float16
-      --max-model-len 4096
-      --gpu-memory-utilization 0.95
-      --config-format hf  
-      --max-num-seqs 16
+      --max-parallel-loading-workers 8
+      --max-model-len 128000
+      --gpu-memory-utilization 0.97
       --max-num-batched-tokens 8192
-      --num-lookahead-slots 4
       --enforce-eager
-
-
-    
-
-
-
-
     ipc: host
     deploy:
       resources:
@@ -33,13 +31,12 @@ services:
           devices:
             - capabilities: [gpu]
 
-
-  fastapi:
-    build: .
-    depends_on:
-      - vllm
+  image-server:
+    image: tiangolo/uvicorn-gunicorn-fastapi:python3.11
+    volumes:
+      - /home/ubuntu/rag/output_images:/app/images
+      - ./image.py:/app/main.py
     ports:
-      - "8080:8080"
+      - "8100:8100"
     environment:
-      - VLLM_API_URL=http://vllm:8000/v1/completions
-
+      - PORT=8100
